@@ -39,15 +39,19 @@ module ViteRails::TagHelpers
                           asset_type: :javascript,
                           skip_preload_tags: false,
                           skip_style_tags: false,
-                          media: 'screen',
                           **options)
+
     entries = vite_manifest.resolve_entries(*names, type: asset_type)
     tags = javascript_include_tag(*entries.fetch(:scripts), extname: false, **options)
     tags << vite_preload_tag(*entries.fetch(:imports), **options) unless skip_preload_tags
 
     options[:extname] = false if Rails::VERSION::MAJOR >= 7
 
-    tags << stylesheet_link_tag(*entries.fetch(:stylesheets), media: media, **options) unless skip_style_tags
+    tags << stylesheet_link_tag(*entries.fetch(:stylesheets), **options) unless skip_style_tags
+
+    if development_or_test_env?
+      tags = javascript_include_tag(*entries.fetch(:scripts), crossorigin: 'anonymous', type: 'module', extname: false, **options)
+    end
 
     tags
   end
@@ -109,5 +113,9 @@ private
     asset_paths.map { |href|
       tag.link(rel: 'modulepreload', href: href, as: 'script', **options)
     }.join("\n").html_safe
+  end
+
+  def development_or_test_env?
+    Rails.env.development? || Rails.env.test?
   end
 end
