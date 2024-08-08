@@ -36,16 +36,14 @@ module ViteRails::TagHelpers
 
   # Public: Renders a <script> tag for the specified Vite entrypoints.
   def vite_javascript_tag(*names,
-                          type: 'module',
                           asset_type: :javascript,
                           skip_preload_tags: false,
                           skip_style_tags: false,
-                          crossorigin: 'anonymous',
                           media: 'screen',
                           **options)
     entries = vite_manifest.resolve_entries(*names, type: asset_type)
-    tags = javascript_include_tag(*entries.fetch(:scripts), crossorigin: crossorigin, type: type, extname: false, **options)
-    tags << vite_preload_tag(*entries.fetch(:imports), crossorigin: crossorigin, **options) unless skip_preload_tags
+    tags = javascript_include_tag(*entries.fetch(:scripts), extname: false, **options)
+    tags << vite_preload_tag(*entries.fetch(:imports), **options) unless skip_preload_tags
 
     options[:extname] = false if Rails::VERSION::MAJOR >= 7
 
@@ -100,16 +98,16 @@ private
   end
 
   # Internal: Renders a modulepreload link tag.
-  def vite_preload_tag(*sources, crossorigin:, **options)
+  def vite_preload_tag(*sources, **options)
     asset_paths = sources.map { |source| path_to_asset(source) }
     try(:request).try(
       :send_early_hints,
       'Link' => asset_paths.map { |href|
-        %(<#{ href }>; rel=modulepreload; as=script; crossorigin=#{ crossorigin })
+        %(<#{ href }>; rel=modulepreload; as=script;)
       }.join("\n"),
     )
     asset_paths.map { |href|
-      tag.link(rel: 'modulepreload', href: href, as: 'script', crossorigin: crossorigin, **options)
+      tag.link(rel: 'modulepreload', href: href, as: 'script', **options)
     }.join("\n").html_safe
   end
 end
